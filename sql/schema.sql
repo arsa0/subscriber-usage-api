@@ -1,0 +1,36 @@
+-- Q3 setup: tables and reference data from the brief.
+-- Written for PostgreSQL.
+-- Activation dates converted from display format (12-Jan-23) to ISO (2023-01-12).
+
+CREATE TABLE subscribers (
+  id             VARCHAR(10)  PRIMARY KEY,
+  name           VARCHAR(100) NOT NULL,
+  plan           VARCHAR(20)  NOT NULL,
+  activationDate DATE         NOT NULL
+);
+
+CREATE TABLE usage (
+  subscriberId VARCHAR(10) NOT NULL REFERENCES subscribers(id),
+  callMinutes  INTEGER     NOT NULL,
+  smsCount     INTEGER     NOT NULL,
+  dataUsageMB  INTEGER     NOT NULL,
+  timestamp    TIMESTAMP   NOT NULL
+);
+
+INSERT INTO subscribers (id, name, plan, activationDate) VALUES
+  ('SUB01', 'Amir', 'Basic',   '2023-01-12'),
+  ('SUB02', 'Sari', 'Premium', '2022-05-03'),
+  ('SUB03', 'Budi', 'Basic',   '2024-09-20'),
+  ('SUB04', 'Dewi', 'Family',  '2021-02-15'),
+  ('SUB05', 'Rian', 'Premium', '2023-08-08'),
+  ('SUB06', 'Nia',  'Basic',   '2024-11-30');
+
+INSERT INTO usage (subscriberId, callMinutes, smsCount, dataUsageMB, timestamp) VALUES
+  ('SUB01', 40, 10, 1500, '2025-08-01 08:00'),
+  ('SUB01', 35,  8, 1200, '2025-08-01 12:00'),
+  ('SUB02', 90, 20, 6000, '2025-08-01 08:00'),
+  ('SUB02', 85, 18, 5800, '2025-08-01 12:00'),
+  ('SUB03', 20,  5,  500, '2025-08-01 08:00'),
+  ('SUB04', 150, 30, 9000, '2025-08-01 08:00'),
+  ('SUB05', 70, 15, 5000, '2025-08-01 08:00'),
+  ('SUB06', 25,  6,  700, '2025-08-01 08:00');
