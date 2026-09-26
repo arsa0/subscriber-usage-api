@@ -203,13 +203,26 @@ See [`q4/EXPLANATION.md`](q4/EXPLANATION.md).
 
 ## Frontend
 
-<!-- TODO: fill this in.
-     - how to install and run it (cd client && npm install && npm run dev)
-     - which port it runs on
-     - how it reaches the API (Vite proxy, or direct with CORS)
-     - what it does: form to record usage, table to view, filter
-     - which states you handled: loading, empty, error, validation messages
-     Keep it to a short paragraph plus the commands. -->
+A small React client for recording and viewing usage.
+
+```bash
+cd client
+npm install
+npm run dev
+```
+
+Runs on http://localhost:5173. Requests use a relative `/usage` path, which Vite proxies to
+http://localhost:3000 (see `client/vite.config.ts`), so the API needs no CORS configuration.
+Start the API first, otherwise the client reports it as unreachable.
+
+A form records usage, a table lists it, and a filter narrows by subscriber ID. Validation is
+left to the API — the form submits with `noValidate` so every submission round-trips, and the
+errors shown per field come from the server's 400 response rather than the browser. Errors that
+do not map to a field are shown above the form.
+
+States handled: submitting, loading, API unreachable, per-field validation errors, and two
+distinct empty states — no records at all, versus no records matching the active filter. The
+layout is responsive and follows the system light/dark preference.
 
 ---
 
