@@ -128,6 +128,10 @@ button:disabled {
   margin-bottom: 12px;
 }
 
+.table-wrap {
+  overflow-x: auto;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -150,6 +154,11 @@ th {
 
 td {
   font-variant-numeric: tabular-nums;
+}
+
+/* A long subscriberId would otherwise stretch the column indefinitely. */
+td:first-child {
+  word-break: break-word;
 }
 
 .numeric {

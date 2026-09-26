@@ -181,38 +181,42 @@ function App() {
           </p>
         )}
 
-        <table>
-          <thead>
-            <tr>
-              <th>Subscriber ID</th>
-              <th className="numeric">Call minutes</th>
-              <th className="numeric">SMS count</th>
-              <th className="numeric">Data usage (MB)</th>
-              <th>Recorded at</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visible.length === 0 ? (
+        {/* Five columns with nowrap headers exceed a narrow viewport;
+            scroll the table instead of the whole page. */}
+        <div className="table-wrap">
+          <table>
+            <thead>
               <tr>
-                <td className="empty" colSpan={5}>
-                  {activeFilter === ''
-                    ? 'No usage recorded yet.'
-                    : `No usage recorded for ${activeFilter}.`}
-                </td>
+                <th>Subscriber ID</th>
+                <th className="numeric">Call minutes</th>
+                <th className="numeric">SMS count</th>
+                <th className="numeric">Data usage (MB)</th>
+                <th>Recorded at</th>
               </tr>
-            ) : (
-              visible.map((record) => (
-                <tr key={`${record.subscriberId}-${record.timestamp}`}>
-                  <td>{record.subscriberId}</td>
-                  <td className="numeric">{record.callMinutes.toLocaleString()}</td>
-                  <td className="numeric">{record.smsCount.toLocaleString()}</td>
-                  <td className="numeric">{record.dataUsageMB.toLocaleString()}</td>
-                  <td>{new Date(record.timestamp).toLocaleString()}</td>
+            </thead>
+            <tbody>
+              {visible.length === 0 ? (
+                <tr>
+                  <td className="empty" colSpan={5}>
+                    {activeFilter === ''
+                      ? 'No usage recorded yet.'
+                      : `No usage recorded for ${activeFilter}.`}
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                visible.map((record) => (
+                  <tr key={`${record.subscriberId}-${record.timestamp}`}>
+                    <td>{record.subscriberId}</td>
+                    <td className="numeric">{record.callMinutes.toLocaleString()}</td>
+                    <td className="numeric">{record.smsCount.toLocaleString()}</td>
+                    <td className="numeric">{record.dataUsageMB.toLocaleString()}</td>
+                    <td>{new Date(record.timestamp).toLocaleString()}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
   );
