@@ -8,7 +8,6 @@
 
 import { UsageInput } from '../src/types';
 
-export function getTotalUsageMB(_records: Pick<UsageInput, 'dataUsageMB'>[]): number {
-  // TODO: fix
-  throw new Error('Not implemented');
+export function getTotalUsageMB(records: Pick<UsageInput, 'dataUsageMB'>[]): number {
+  return records.reduce((total, record) => total + record.dataUsageMB, 0);
 }
