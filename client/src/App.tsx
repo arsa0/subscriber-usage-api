@@ -1,122 +1,221 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
+import { createUsage, errorsFor, loadUsage, unmappedErrors } from './api';
+import { EMPTY_FORM, USAGE_FIELDS } from './types';
+import type { UsageField, UsageFormValues, UsageRecord } from './types';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [form, setForm] = useState<UsageFormValues>(EMPTY_FORM);
+  const [submitErrors, setSubmitErrors] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [allRecords, setAllRecords] = useState<UsageRecord[]>([]);
+  const [rows, setRows] = useState<UsageRecord[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [filterInput, setFilterInput] = useState('');
+  const [activeFilter, setActiveFilter] = useState('');
+
+  const [reloadToken, setReloadToken] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadUsage(activeFilter).then(
+      ({ all, rows: next }) => {
+        if (cancelled) return;
+        setAllRecords(all);
+        setRows(next);
+        setLoadError(null);
+      },
+      (error: unknown) => {
+        if (cancelled) return;
+        setLoadError(error instanceof Error ? error.message : 'Could not reach the API');
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeFilter, reloadToken]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+
+    try {
+      const result = await createUsage(form);
+
+      if (!result.ok) {
+        setSubmitErrors(result.errors);
+        return;
+      }
+
+      setSubmitErrors([]);
+      setForm(EMPTY_FORM);
+      setReloadToken((token) => token + 1);
+    } catch (error) {
+      setSubmitErrors([error instanceof Error ? error.message : 'Could not reach the API']);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const subscriberIds = useMemo(
+    () => [...new Set(allRecords.map((record) => record.subscriberId))].sort(),
+    [allRecords],
+  );
+
+  const visible = useMemo(
+    () => [...rows].sort((a, b) => b.timestamp.localeCompare(a.timestamp)),
+    [rows],
+  );
+
+  const formErrors = unmappedErrors(submitErrors);
+
+  function setField(field: UsageField, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <main>
+      <h1>Subscriber usage</h1>
+
+      {/* noValidate: the API owns validation, so every submit round-trips and
+          the field errors below come from the server rather than the browser. */}
+      <form onSubmit={handleSubmit} noValidate>
+        <h2>Record usage</h2>
+
+        {formErrors.length > 0 && (
+          <ul className="form-errors" role="alert">
+            {formErrors.map((error) => (
+              <li key={error}>{error}</li>
+            ))}
+          </ul>
+        )}
+
+        <div className="fields">
+          {USAGE_FIELDS.map(({ name, label, type }) => {
+            const fieldErrors = errorsFor(submitErrors, name);
+
+            return (
+              <p className="field" key={name}>
+                <label htmlFor={name}>{label}</label>
+                <input
+                  id={name}
+                  name={name}
+                  type={type}
+                  step={type === 'number' ? 'any' : undefined}
+                  value={form[name]}
+                  aria-invalid={fieldErrors.length > 0 || undefined}
+                  aria-describedby={fieldErrors.length > 0 ? `${name}-error` : undefined}
+                  onChange={(event) => setField(name, event.target.value)}
+                />
+                {fieldErrors.length > 0 && (
+                  <span className="field-error" id={`${name}-error`}>
+                    {fieldErrors.join('. ')}
+                  </span>
+                )}
+              </p>
+            );
+          })}
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+
+        <button type="submit" disabled={submitting}>
+          {submitting ? 'Saving…' : 'Record usage'}
         </button>
-      </section>
+      </form>
 
-      <div className="ticks"></div>
+      <section>
+        <div className="table-head">
+          <h2>
+            Records <span className="count">({visible.length})</span>
+          </h2>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          <form
+            className="filter"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setActiveFilter(filterInput.trim());
+            }}
+          >
+            <label htmlFor="filter">Subscriber ID</label>
+            <input
+              id="filter"
+              list="subscriber-ids"
+              placeholder="All subscribers"
+              value={filterInput}
+              onChange={(event) => setFilterInput(event.target.value)}
+            />
+            {/* Deduped, because a subscriber has many usage records. */}
+            <datalist id="subscriber-ids">
+              {subscriberIds.map((id) => (
+                <option key={id} value={id} />
+              ))}
+            </datalist>
+
+            <button type="submit">Filter</button>
+            <button
+              type="button"
+              onClick={() => {
+                setFilterInput('');
+                setActiveFilter('');
+              }}
+              disabled={activeFilter === '' && filterInput === ''}
+            >
+              Clear
+            </button>
+          </form>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {activeFilter !== '' && (
+          <p className="active-filter">
+            Filtered by <code>subscriberId={activeFilter}</code>
+          </p>
+        )}
+
+        {loadError !== null && (
+          <p className="load-error" role="alert">
+            {loadError}. Is the API running on port 3000?
+          </p>
+        )}
+
+        <table>
+          <thead>
+            <tr>
+              <th>Subscriber ID</th>
+              <th className="numeric">Call minutes</th>
+              <th className="numeric">SMS count</th>
+              <th className="numeric">Data usage (MB)</th>
+              <th>Recorded at</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.length === 0 ? (
+              <tr>
+                <td className="empty" colSpan={5}>
+                  {activeFilter === ''
+                    ? 'No usage recorded yet.'
+                    : `No usage recorded for ${activeFilter}.`}
+                </td>
+              </tr>
+            ) : (
+              visible.map((record) => (
+                <tr key={`${record.subscriberId}-${record.timestamp}`}>
+                  <td>{record.subscriberId}</td>
+                  <td className="numeric">{record.callMinutes.toLocaleString()}</td>
+                  <td className="numeric">{record.smsCount.toLocaleString()}</td>
+                  <td className="numeric">{record.dataUsageMB.toLocaleString()}</td>
+                  <td>{new Date(record.timestamp).toLocaleString()}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </section>
+    </main>
+  );
 }
 
-export default App
+export default App;
