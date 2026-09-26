@@ -1,0 +1,28 @@
+@host = http://localhost:3000
+
+### Record usage
+POST {{host}}/usage
+Content-Type: application/json
+
+{
+  "subscriberId": "SUB01",
+  "callMinutes": 40,
+  "smsCount": 10,
+  "dataUsageMB": 1500
+}
+
+### Retrieve all
+GET {{host}}/usage
+
+### Filter by subscriber
+GET {{host}}/usage?subscriberId=SUB01
+
+### Invalid — should return 400 with multiple errors
+POST {{host}}/usage
+Content-Type: application/json
+
+{
+  "subscriberId": "",
+  "callMinutes": "40",
+  "dataUsageMB": -5
+}
