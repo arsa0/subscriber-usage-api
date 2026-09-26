@@ -1,14 +1,22 @@
 import { Router } from 'express';
+import { validateUsage } from '../validation/usage.validation';
+import { createUsage, listUsage } from '../services/usage.service';
 
 export const usageRouter = Router();
 
-// TODO: design your endpoints, methods, and request/response shapes,
-// then document them in README.md. Rename or restructure freely.
+usageRouter.post('/', (req, res) => {
+  const result = validateUsage(req.body);
 
-usageRouter.post('/', (_req, res) => {
-  res.status(501).json({ error: 'Not implemented' });
+  if (!result.ok) return res.status(400).json({ errors: result.errors });
+
+  const record = createUsage(result.value);
+  res.status(201).json(record);
 });
 
-usageRouter.get('/', (_req, res) => {
-  res.status(501).json({ error: 'Not implemented' });
+usageRouter.get('/', (req, res) => {
+  const { subscriberId } = req.query;
+
+  const records = typeof subscriberId === 'string' ? listUsage({ subscriberId }) : listUsage();
+
+  res.status(200).json(records);
 });
