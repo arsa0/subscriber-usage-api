@@ -19,6 +19,10 @@ function App() {
 
   const [reloadToken, setReloadToken] = useState(0);
 
+  const loadKey = `${reloadToken}:${activeFilter}`;
+  const [settledKey, setSettledKey] = useState<string | null>(null);
+  const loading = settledKey !== loadKey;
+
   useEffect(() => {
     let cancelled = false;
 
@@ -28,17 +32,19 @@ function App() {
         setAllRecords(all);
         setRows(next);
         setLoadError(null);
+        setSettledKey(loadKey);
       },
       (error: unknown) => {
         if (cancelled) return;
         setLoadError(error instanceof Error ? error.message : 'Could not reach the API');
+        setSettledKey(loadKey);
       },
     );
 
     return () => {
       cancelled = true;
     };
-  }, [activeFilter, reloadToken]);
+  }, [activeFilter, reloadToken, loadKey]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -198,9 +204,11 @@ function App() {
               {visible.length === 0 ? (
                 <tr>
                   <td className="empty" colSpan={5}>
-                    {activeFilter === ''
-                      ? 'No usage recorded yet.'
-                      : `No usage recorded for ${activeFilter}.`}
+                    {loading
+                      ? 'Loading…'
+                      : activeFilter === ''
+                        ? 'No usage recorded yet.'
+                        : `No usage recorded for ${activeFilter}.`}
                   </td>
                 </tr>
               ) : (
