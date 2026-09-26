@@ -1,6 +1,5 @@
 import { UsageInput, UsageRecord } from '../types';
 
-// In-memory store. Contents are lost when the process restarts.
 const records: UsageRecord[] = [];
 
 export function createUsage(input: UsageInput): Readonly<UsageRecord> {
@@ -17,7 +16,6 @@ export function listUsage(filter?: { subscriberId?: string }): UsageRecord[] {
   return [...records];
 }
 
-// Test helper: clears the store between tests.
 export function resetStore(): void {
   records.length = 0;
 }

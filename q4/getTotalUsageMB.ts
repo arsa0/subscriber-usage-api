@@ -1,5 +1,4 @@
 // Q4: original implementation, kept for reference.
-//
 // function getTotalUsageMB(records) {
 //   return records.reduce((total, record) => {
 //     total += record.dataUsageMB;
